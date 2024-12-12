@@ -23,3 +23,9 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}@"
             f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+
+    rabbitmq_host: str
+    rabbitmq_port: int
+    rabbitmq_user: str
+    rabbitmq_password: str
+    rabbitmq_notifications_queue: str

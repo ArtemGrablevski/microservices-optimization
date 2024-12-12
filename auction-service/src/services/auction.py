@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-import httpx
+from faststream.rabbit import RabbitBroker
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import Auction
@@ -16,11 +16,11 @@ class AuctionService:
         self,
         session: AsyncSession,
         auction_repository: AuctionRepository,
+        message_broker: RabbitBroker,
     ) -> None:
         self.session = session
         self.auction_repository = auction_repository
-        # TODO: move it to config
-        self.notification_service_endpoint = "http://127.0.0.1:8080/api/notifications"
+        self.message_broker = message_broker
 
     async def get_all_auctions(self, skip: int, limit: int) -> list[Auction]:
         return await self.auction_repository.get_auctions(
@@ -56,15 +56,12 @@ class AuctionService:
             date=date
         )
 
-        async with httpx.AsyncClient() as async_client:
-            repsonse = await async_client.post(
-                url=self.notification_service_endpoint,
-                json={
-                    "message": "New aution was created: "
-                    f"{date=}, {number_of_slots=}, {entrance_ticket_price=}"
-                },
-            )
-            print(repsonse.json())
+        message = f"New aution was created: {date=}, {number_of_slots=}, {entrance_ticket_price=}"
+        # TODO: move queue name to config
+        await self.message_broker.publish(
+            message=message,
+            queue="rabbitmq_notifications_queue",
+        )
 
         await self.session.commit()
 
